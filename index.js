@@ -14,13 +14,6 @@ server.keepAliveTimeout = 120000;
 server.headersTimeout = 120000;
 
 // 3. --- Middleware ---
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: "Too many requests from this IP, please try again later." },
-});
-
-const allowedOrigins = ["https://dp-web-lyfe.onrender.com"];
 
 app.use(
   cors({
@@ -34,6 +27,14 @@ app.use(
     credentials: true,
   })
 );
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Too many requests from this IP, please try again later." },
+});
+
+const allowedOrigins = ["https://dp-web-lyfe.onrender.com"];
 
 app.use(express.json());
 app.use("/api/", apiLimiter);
