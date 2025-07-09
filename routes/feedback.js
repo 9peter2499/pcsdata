@@ -22,7 +22,11 @@ function generateCustomId(prefixChar, tord_id) {
 router.post("/", checkAdmin, async (req, res) => {
   const { tord_id, feedback_message, status } = req.body;
 
-  if (!tord_id || !feedback_message || !status) {
+  if (
+    typeof tord_id !== "string" ||
+    typeof feedback_message !== "string" ||
+    typeof status !== "number"
+  ) {
     return res
       .status(400)
       .json({ error: "tord_id, feedback_message, and status are required" });
@@ -60,7 +64,7 @@ router.put("/:id", checkAdmin, async (req, res) => {
   const { id } = req.params;
   const { feedback_message, status } = req.body;
 
-  if (!feedback_message || !status) {
+  if (typeof feedback_message !== "string" || typeof status !== "number") {
     return res
       .status(400)
       .json({ error: "feedback_message and status are required" });
