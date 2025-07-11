@@ -7,13 +7,15 @@ const supabase = require("../supabaseClient");
 router.get("/", async (req, res) => {
   const group = req.query.group;
 
+  console.log("🔍 option group = ", group);
+
   if (!group) return res.status(400).json({ error: "Missing option group" });
 
   try {
     const { data, error } = await supabase
       .from("MasterOptions")
       .select("option_id, option_label, display_order")
-      .eq("option_group", group)
+      .ilike("option_group", group) // ✅ ตรงนี้แก้
       .eq("is_active", true)
       .order("display_order", { ascending: true });
 
