@@ -50,6 +50,7 @@ app.use("/api/tordetail", require("./routes/tordetail"));
 app.use("/api/feedback", require("./routes/feedback"));
 app.use("/api/worked", require("./routes/worked"));
 app.use("/api/summary", require("./routes/summary"));
+app.use("/api/options", require("./routes/options"));
 
 // 6. --- Start Server ---
 server.listen(PORT, "0.0.0.0", () => {
