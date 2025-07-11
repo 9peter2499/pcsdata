@@ -72,6 +72,34 @@ router.put("/:id", checkAdmin, async (req, res) => {
   }
 });
 
+// --- GET: Single TOR by ID ---
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from("TORs")
+      .select(
+        `
+        *,
+        Modules(*),
+        tor_status_option:MasterOptions!fk_tor_status(*),
+        tor_fixing_option:MasterOptions!fk_tor_fixing(*),
+        TORDetail(*)
+      `
+      )
+      .eq("tor_id", id)
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: "TOR not found" });
+
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- PUT: Update TOR ---
 router.put("/:id", checkAdmin, async (req, res) => {
   const { id } = req.params;
