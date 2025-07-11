@@ -7,7 +7,7 @@ const { addLog } = require("../services/logService");
 
 // --- Helper: สร้าง ID ใหม่แบบ custom ---
 function generateCustomId(prefixChar, tord_id) {
-  const baseId = prefixChar + tord_id.substring(1); // เปลี่ยน D → F หรือ W
+  const baseId = prefixChar + tord_id.substring(1);
   const now = new Date();
   const pad = (n) => n.toString().padStart(2, "0");
   const timestamp = `${now.getFullYear().toString().slice(-2)}${pad(
@@ -20,16 +20,17 @@ function generateCustomId(prefixChar, tord_id) {
 
 // --- POST: Create Feedback ---
 router.post("/", checkAdmin, async (req, res) => {
-  const { tord_id, feedback_message, status } = req.body;
+  const { tord_id, feedback_message, feedback_status_id } = req.body;
 
   if (
     typeof tord_id !== "string" ||
     typeof feedback_message !== "string" ||
-    typeof status !== "number"
+    typeof feedback_status_id !== "string"
   ) {
-    return res
-      .status(400)
-      .json({ error: "tord_id, feedback_message, and status are required" });
+    return res.status(400).json({
+      error:
+        "tord_id, feedback_message, and feedback_status_id are required as strings",
+    });
   }
 
   const new_id = generateCustomId("F", tord_id);
@@ -41,7 +42,7 @@ router.post("/", checkAdmin, async (req, res) => {
         feedback_id: new_id,
         tord_id,
         feedback_message,
-        status,
+        feedback_status_id,
         feedback_date: new Date(),
         created_by: req.user.id,
       },
@@ -62,18 +63,21 @@ router.post("/", checkAdmin, async (req, res) => {
 // --- PUT: Update Feedback ---
 router.put("/:id", checkAdmin, async (req, res) => {
   const { id } = req.params;
-  const { feedback_message, status } = req.body;
+  const { feedback_message, feedback_status_id } = req.body;
 
-  if (typeof feedback_message !== "string" || typeof status !== "number") {
-    return res
-      .status(400)
-      .json({ error: "feedback_message and status are required" });
+  if (
+    typeof feedback_message !== "string" ||
+    typeof feedback_status_id !== "string"
+  ) {
+    return res.status(400).json({
+      error: "feedback_message and feedback_status_id are required as strings",
+    });
   }
 
   try {
     const { data: oldData } = await supabase
       .from("PATFeedback")
-      .select("feedback_message, status")
+      .select("feedback_message, feedback_status_id")
       .eq("feedback_id", id)
       .single();
 
@@ -81,8 +85,8 @@ router.put("/:id", checkAdmin, async (req, res) => {
       .from("PATFeedback")
       .update({
         feedback_message,
-        status,
-        updated_by: req.user.id, // ✅ เพิ่มตรงนี้
+        feedback_status_id,
+        updated_by: req.user.id,
         updated_at: new Date(),
       })
       .eq("feedback_id", id)
@@ -92,13 +96,16 @@ router.put("/:id", checkAdmin, async (req, res) => {
     if (error) throw error;
 
     await addLog(req.user.id, "UPDATE_FEEDBACK", {
-      id,
+      feedback_id: id,
       changes: {
         feedback_message: {
           from: oldData.feedback_message,
           to: feedback_message,
         },
-        status: { from: oldData.status, to: status },
+        feedback_status_id: {
+          from: oldData.feedback_status_id,
+          to: feedback_status_id,
+        },
       },
     });
 

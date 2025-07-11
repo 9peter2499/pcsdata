@@ -17,6 +17,15 @@ router.put("/:tord_id", checkAdmin, async (req, res) => {
     return res.status(400).json({ error: "Invalid input data" });
   }
 
+  if (
+    updateData.tord_posible_id &&
+    typeof updateData.tord_posible_id !== "string"
+  ) {
+    return res
+      .status(400)
+      .json({ error: "tord_posible_id must be a string if provided" });
+  }
+
   try {
     // 1. ดึงข้อมูลเก่า
     const { data: oldData, error: fetchError } = await supabase
