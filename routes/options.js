@@ -4,8 +4,10 @@ const router = express.Router();
 const supabase = require("../supabaseClient");
 
 // --- GET: MasterOptions by group ---
-router.get("/:group", async (req, res) => {
-  const { group } = req.params;
+router.get("/", async (req, res) => {
+  const group = req.query.group;
+
+  if (!group) return res.status(400).json({ error: "Missing option group" });
 
   try {
     const { data, error } = await supabase
