@@ -21,43 +21,46 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (เวอร์ชัน Debug ที่ง่ายที่สุด) ---
+// --- GET: Single TOR by ID (Step 2: เพิ่ม TORDetail) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`); // เพิ่ม Log เพื่อตรวจสอบ
+  console.log(`[API] Step 2: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
-    // ดึงแค่ข้อมูลจากตาราง TORs อย่างเดียวเท่านั้น
+    // ดึงข้อมูลหลักของ TORs
     const { data: torData, error: torError } = await supabase
       .from("TORs")
-      .select(`*`) // ใช้ Query ที่ง่ายที่สุด
+      .select(`*`)
       .eq("tor_id", id)
       .single();
 
-    if (torError) {
+    if (torError) throw torError;
+    if (!torData) return res.status(404).json({ error: "TOR not found" });
+
+    // --- ส่วนที่เพิ่มเข้ามา ---
+    // ดึงข้อมูลจากตาราง TORDetail
+    const { data: detailData, error: detailError } = await supabase
+      .from("TORDetail")
+      .select(`*`)
+      .eq("tord_id", id);
+
+    if (detailError) {
       console.error(
-        `[API ERROR] เกิดข้อผิดพลาดตอนดึงข้อมูล TORs:`,
-        torError.message
+        `[API ERROR] เกิดข้อผิดพลาดตอนดึง TORDetail:`,
+        detailError.message
       );
-      throw torError;
+      throw detailError;
     }
 
-    if (!torData) {
-      console.log(`[API] ไม่พบ TOR ID: ${id}`);
-      return res.status(404).json({ error: "TOR not found" });
-    }
+    // ประกอบร่าง TORDetail กลับเข้าไป
+    torData.TORDetail = detailData || [];
+    // --- สิ้นสุดส่วนที่เพิ่มเข้ามา ---
 
-    // ส่งข้อมูลหลักกลับไปก่อน โดยใส่ TORDetail เป็น Array ว่างๆ
-    // เพื่อป้องกันไม่ให้ Frontend พัง
-    torData.TORDetail = [];
-
-    console.log(
-      `[API] ดึงข้อมูลสำเร็จสำหรับ TOR ID: ${id}. กำลังส่งข้อมูลกลับ...`
-    );
+    console.log(`[API] Step 2: ดึงข้อมูลสำเร็จ. กำลังส่งข้อมูลกลับ...`);
     res.status(200).json(torData);
   } catch (error) {
     console.error(
-      `[API CATCH] เกิดข้อผิดพลาดที่ไม่คาดคิดสำหรับ TOR ID ${id}:`,
+      `[API CATCH] เกิดข้อผิดพลาดสำหรับ TOR ID ${id}:`,
       error.message
     );
     res.status(500).json({ error: error.message });
