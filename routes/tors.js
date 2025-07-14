@@ -53,20 +53,23 @@ router.get("/:id", async (req, res) => {
     const detailObject = detailData[0];
 
     // --- ส่วนที่แก้ไข ---
-    // Step 3: ดึงข้อมูล Feedback และ Worked โดยระบุ Query อย่างชัดเจน
+    // Step 3: ดึงข้อมูล Feedback และ Worked โดยระบุชื่อ Constraint ที่ถูกต้อง
     const { data: feedbackData, error: feedbackError } = await supabase
       .from("PATFeedback")
       .select(
-        `*, feedback_status:MasterOptions!feedback_status_id(option_label)`
-      ) // ระบุ Foreign Key อย่างชัดเจน
+        `*, feedback_status:MasterOptions!fk_patfeedback_status(option_label)`
+      ) // ใช้ชื่อ Constraint ที่ถูกต้อง
       .eq("tord_id", id);
     if (feedbackError)
       throw new Error(`Error fetching PATFeedback: ${feedbackError.message}`);
     console.log("[API] Step 3.1: ดึงข้อมูล PATFeedback สำเร็จ");
 
+    // สมมติว่า PCSWorked มี Constraint ชื่อ fk_pcsworked_status
     const { data: workedData, error: workedError } = await supabase
       .from("PCSWorked")
-      .select(`*, worked_status:MasterOptions!worked_status_id(option_label)`) // ระบุ Foreign Key อย่างชัดเจน
+      .select(
+        `*, worked_status:MasterOptions!fk_pcsworked_status(option_label)`
+      ) // ใช้ชื่อ Constraint ที่ถูกต้อง
       .eq("tord_id", id);
     if (workedError)
       throw new Error(`Error fetching PCSWorked: ${workedError.message}`);
