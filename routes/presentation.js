@@ -27,6 +27,8 @@ router.post("/", checkAdmin, async (req, res) => {
         ptt_timerange,
         ptt_remark,
         ptt_by: user.email,
+        created_by: user.id, //
+        updated_by: user.id, //
       })
       .select("ptt_id") // **สำคัญมาก: สั่งให้ trả về ptt_id ที่เพิ่งสร้าง**
       .single();
