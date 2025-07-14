@@ -104,21 +104,32 @@ router.get("/:id", async (req, res) => {
         `Error fetching PresentationItems: ${pttItemsError.message}`
       );
 
-    // Step 4: ผูกข้อมูลเพิ่มเติมให้ทุกรายการ TORDetail
-const enrichedDetails = detailData.map((detail) => {
-  const tordId = detail.tord_id;
+    // Step 4: enrich data
+    const enrichedDetails = detailData.map((detail) => {
+      const tordId = detail.tord_id;
+      return {
+        ...detail,
+        PATFeedback: feedbackData.filter((f) => f.tord_id === tordId),
+        PCSWorked: workedData.filter((w) => w.tord_id === tordId),
+        PresentationItems: presentationItems.filter(
+          (p) => p.tord_id === tordId
+        ),
+      };
+    });
 
-  return {
-    ...detail,
-    PATFeedback: feedbackData.filter((f) => f.tord_id === tordId),
-    PCSWorked: workedData.filter((w) => w.tord_id === tordId),
-    PresentationItems: presentationItems.filter((p) => p.tord_id === tordId),
-  };
+    torData.TORDetail = enrichedDetails;
+
+    // ✅ ปิด GET ให้เรียบร้อยก่อน
+    res.status(200).json(torData);
+  } catch (error) {
+    // <<<<< ปิด try ของ GET
+    console.error(
+      `[API CATCH] Error fetching detail for TOR ID ${id}:`,
+      error.message
+    );
+    res.status(500).json({ error: error.message });
+  }
 });
-
-torData.TORDetail = enrichedDetails;
-
-res.status(200).json(torData);
 
 // --- PUT: Update TOR ---
 // (ส่วนนี้ทำงานถูกต้องแล้ว ไม่ต้องแก้ไข)
