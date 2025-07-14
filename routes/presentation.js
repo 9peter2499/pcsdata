@@ -3,10 +3,8 @@ const express = require("express");
 const router = express.Router();
 const checkAdmin = require("../middlewares/checkAdmin");
 
-// สำคัญ: เราจะ import createClient มาใช้สร้าง instance ใหม่
+// 1. Import createClient และ Environment Variables
 const { createClient } = require("@supabase/supabase-js");
-
-// เราจะใช้ Environment Variables ที่ตั้งค่าไว้ใน Render.com
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
@@ -14,9 +12,8 @@ router.post("/", checkAdmin, async (req, res) => {
   const { ptt_type, ptt_date, ptt_timerange, ptt_remark, selected_tors } =
     req.body;
   const user = req.user;
-
-  // 1. ดึง Token ของผู้ใช้ออกจาก Header
   const token = req.headers.authorization?.split(" ")[1];
+
   if (!token) {
     return res.status(401).json({ error: "Authorization token not found." });
   }
@@ -64,12 +61,10 @@ router.post("/", checkAdmin, async (req, res) => {
 
     if (itemsError) throw itemsError;
 
-    res
-      .status(201)
-      .json({
-        message: "Presentation recorded successfully.",
-        ptt_id: newPresentationId,
-      });
+    res.status(201).json({
+      message: "Presentation recorded successfully.",
+      ptt_id: newPresentationId,
+    });
   } catch (error) {
     console.error("Error creating presentation:", error.message);
     res.status(500).json({ error: error.message });
