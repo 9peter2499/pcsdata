@@ -3,9 +3,10 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
+const { addLog } = require("../services/logService");
 
 // --- GET: All TORs ---
-// (ส่วนนี้เหมือนเดิม ไม่ต้องแก้ไข)
+// (ส่วนนี้ทำงานถูกต้องแล้ว ไม่ต้องแก้ไข)
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("TORs").select(`
@@ -21,66 +22,73 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (with All Details) ---
+// --- GET: Single TOR by ID (with All Details) - NEW BULLETPROOF VERSION ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 1. ดึงข้อมูลหลักของ TORs ก่อน
+    // Step 1: ดึงข้อมูลหลักของ TORs ก่อน (แบบไม่ซับซ้อน)
     const { data: torData, error: torError } = await supabase
       .from("TORs")
-      .select(
-        `
-        *,
-        Modules(*),
-        tor_status_option:MasterOptions!fk_tor_status(option_label),
-        tor_fixing_option:MasterOptions!fk_tor_fixing(option_label)
-        `
-      )
+      .select(`*, Modules(*)`)
       .eq("tor_id", id)
       .single();
 
     if (torError) throw torError;
     if (!torData) return res.status(404).json({ error: "TOR not found" });
 
-    // 2. ดึงข้อมูล TORDetail ที่เกี่ยวข้อง
+    // Step 2: ดึงข้อมูล TORDetail
     const { data: detailData, error: detailError } = await supabase
       .from("TORDetail")
-      .select(`*, PATFeedback(*), PCSWorked(*)`)
+      .select(`*`)
       .eq("tord_id", id);
 
     if (detailError) throw detailError;
 
-    // 3. ดึงข้อมูล Presentation ที่เกี่ยวข้อง (ถ้ามี TORDetail)
-    if (detailData && detailData.length > 0) {
-      const { data: presentationItems, error: pttError } = await supabase
-        .from("PresentationItems")
-        .select(`*, Presentation(*)`)
-        .eq("tord_id", id);
-
-      if (pttError) throw pttError;
-
-      // นำข้อมูล Presentation ไปใส่ใน TORDetail
-      detailData[0].PresentationItems = presentationItems || [];
+    // ถ้าไม่มีข้อมูล Detail ให้ส่งข้อมูลหลักกลับไปเลย
+    if (!detailData || detailData.length === 0) {
+      torData.TORDetail = [];
+      return res.status(200).json(torData);
     }
 
-    // 4. ประกอบร่างข้อมูลทั้งหมดกลับเข้าไปใน torData
-    torData.TORDetail = detailData || [];
+    const detailObject = detailData[0];
 
-    // 5. ส่งข้อมูลที่ประกอบร่างเสร็จแล้วกลับไป
+    // Step 3: ดึงข้อมูลที่เกี่ยวข้องทีละส่วน
+    const { data: feedbackData } = await supabase
+      .from("PATFeedback")
+      .select("*")
+      .eq("tord_id", id);
+    const { data: workedData } = await supabase
+      .from("PCSWorked")
+      .select("*")
+      .eq("tord_id", id);
+    const { data: presentationItems } = await supabase
+      .from("PresentationItems")
+      .select(`*, Presentation(*)`)
+      .eq("tord_id", id);
+
+    // Step 4: ประกอบร่างข้อมูลทั้งหมดเข้าไปใน Object เดียว
+    detailObject.PATFeedback = feedbackData || [];
+    detailObject.PCSWorked = workedData || [];
+    detailObject.PresentationItems = presentationItems || [];
+
+    // Frontend คาดหวังว่า TORDetail จะเป็น Array
+    torData.TORDetail = [detailObject];
+
+    // Step 5: ส่งข้อมูลที่ประกอบเสร็จแล้วกลับไป
     res.status(200).json(torData);
   } catch (error) {
-    console.error("Error fetching TOR detail:", error.message);
+    console.error(`Error fetching detail for TOR ID ${id}:`, error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
 // --- PUT: Update TOR ---
+// (ส่วนนี้ทำงานถูกต้องแล้ว ไม่ต้องแก้ไข)
 router.put("/:id", checkAdmin, async (req, res) => {
   const { id } = req.params;
   const { tor_status_id, tor_fixing_id } = req.body;
 
-  // Basic validation
   if (!tor_status_id || typeof tor_status_id !== "string") {
     return res
       .status(400)
