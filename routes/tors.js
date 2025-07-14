@@ -21,16 +21,16 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (The Ultimate Fix Version) ---
+// --- GET: Single TOR by ID (The Definitive Fix Version) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] Ultimate Fix: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
+  console.log(`[API] Definitive Fix: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
-    // Step 1: ดึงข้อมูลหลักของ TORs
+    // Step 1: ดึงข้อมูลหลักของ TORs และข้อมูล Modules ที่เชื่อมกัน
     const { data: torData, error: torError } = await supabase
       .from("TORs")
-      .select(`*`)
+      .select(`*, Modules(*)`) // ดึง Modules มาด้วย
       .eq("tor_id", id)
       .single();
     if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
@@ -46,6 +46,7 @@ router.get("/:id", async (req, res) => {
       throw new Error(`Error fetching TORDetail: ${detailError.message}`);
     console.log("[API] Step 2: ดึงข้อมูล TORDetail สำเร็จ");
 
+    // ถ้าไม่มีข้อมูล Detail ให้ส่งข้อมูลหลักกลับไปเลย
     if (!detailData || detailData.length === 0) {
       torData.TORDetail = [];
       return res.status(200).json(torData);
@@ -53,46 +54,55 @@ router.get("/:id", async (req, res) => {
     const detailObject = detailData[0];
 
     // --- ส่วนที่แก้ไข ---
-    // Step 3: ดึงข้อมูล Feedback และ Worked โดยระบุชื่อ Constraint ที่ถูกต้อง
-    const { data: feedbackData, error: feedbackError } = await supabase
-      .from("PATFeedback")
-      .select(
-        `*, feedback_status:MasterOptions!fk_patfeedback_status(option_label)`
-      ) // ใช้ชื่อ Constraint ที่ถูกต้อง
-      .eq("tord_id", id);
+    // Step 3 & 4: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดแบบแยกส่วน (Flat Queries)
+    const [
+      { data: feedbackData, error: feedbackError },
+      { data: workedData, error: workedError },
+      { data: presentationItems, error: pttItemsError },
+    ] = await Promise.all([
+      supabase.from("PATFeedback").select("*").eq("tord_id", id),
+      supabase.from("PCSWorked").select("*").eq("tord_id", id),
+      supabase.from("PresentationItems").select("*").eq("tord_id", id),
+    ]);
+
     if (feedbackError)
       throw new Error(`Error fetching PATFeedback: ${feedbackError.message}`);
-    console.log("[API] Step 3.1: ดึงข้อมูล PATFeedback สำเร็จ");
-
-    // สมมติว่า PCSWorked มี Constraint ชื่อ fk_pcsworked_status
-    const { data: workedData, error: workedError } = await supabase
-      .from("PCSWorked")
-      .select(
-        `*, worked_status:MasterOptions!fk_pcsworked_status(option_label)`
-      ) // ใช้ชื่อ Constraint ที่ถูกต้อง
-      .eq("tord_id", id);
     if (workedError)
       throw new Error(`Error fetching PCSWorked: ${workedError.message}`);
-    console.log("[API] Step 3.2: ดึงข้อมูล PCSWorked สำเร็จ");
-    // --- สิ้นสุดส่วนที่แก้ไข ---
-
-    // Step 4: ดึงข้อมูล PresentationItems
-    const { data: presentationItems, error: pttItemsError } = await supabase
-      .from("PresentationItems")
-      .select(`*, Presentation(*)`)
-      .eq("tord_id", id);
     if (pttItemsError)
       throw new Error(
         `Error fetching PresentationItems: ${pttItemsError.message}`
       );
-    console.log("[API] Step 4: ดึงข้อมูล PresentationItems สำเร็จ");
+    console.log(
+      "[API] Step 3 & 4: ดึงข้อมูล Feedback, Worked, และ PresentationItems สำเร็จ"
+    );
+
+    // Step 4.5: ดึงข้อมูล Presentation หลัก ถ้ามี Items
+    if (presentationItems && presentationItems.length > 0) {
+      const presentationIds = presentationItems.map((item) => item.ptti_id);
+      const { data: presentations, error: pttError } = await supabase
+        .from("Presentation")
+        .select("*")
+        .in("ptt_id", presentationIds);
+
+      if (pttError)
+        throw new Error(`Error fetching Presentation: ${pttError.message}`);
+
+      // นำข้อมูล Presentation กลับไปรวมกับ PresentationItems
+      presentationItems.forEach((item) => {
+        item.Presentation =
+          presentations.find((p) => p.ptt_id === item.ptti_id) || null;
+      });
+    }
+    console.log("[API] Step 4.5: ดึงและประกอบร่าง Presentation สำเร็จ");
+    // --- สิ้นสุดส่วนที่แก้ไข ---
 
     // Step 5: ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
     detailObject.PCSWorked = workedData || [];
     detailObject.PresentationItems = presentationItems || [];
     torData.TORDetail = [detailObject];
-    console.log("[API] Step 5: ประกอบร่างข้อมูลสำเร็จ");
+    console.log("[API] Step 5: ประกอบร่างข้อมูลทั้งหมดสำเร็จ");
 
     res.status(200).json(torData);
   } catch (error) {
