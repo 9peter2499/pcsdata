@@ -5,52 +5,38 @@ const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
 const { addLog } = require("../services/logService");
 
-// --- GET: All TORs (NEW SIMPLIFIED VERSION) ---
-router.get("/", async (req, res) => {
+// --- GET: Single TOR by ID (The Definitive Fix Version) ---
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+
   try {
-    // ดึงข้อมูลเท่าที่จำเป็น เพื่อให้เซิร์ฟเวอร์ทำงานได้แน่นอน
-    const { data, error } = await supabase.from("TORs").select(`
+    // Step 1: ดึงข้อมูลหลักของ TORs
+    const { data: torData, error: torError } = await supabase
+      .from("TORs")
+      .select(
+        `
         tor_id,
         tor_name,
         created_at,
         Modules(module_name),
         tor_status:MasterOptions!fk_tor_status(option_label),
         tor_fixing:MasterOptions!fk_tor_fixing(option_label)
-      `);
-
-    if (error) throw error;
-
-    // แปลงข้อมูลให้อยู่ในรูปแบบที่ Frontend ใช้งานได้
-    const formattedData = data.map((item) => ({
-      ...item,
-      tor_status: item.tor_status?.option_label || "N/A",
-      tor_fixing: item.tor_fixing?.option_label || "",
-    }));
-
-    res.status(200).json(formattedData);
-  } catch (error) {
-    console.error("[API ERROR] GET /tors failed:", error.message);
-    res.status(500).json({ error: "Failed to fetch TOR list." });
-  }
-});
-
-// --- GET: Single TOR by ID (DEFINITIVE VERSION) ---
-router.get("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    // Step 1: Fetch main TOR data
-    const { data: torData, error: torError } = await supabase
-      .from("TORs")
-      .select(`*, Modules(*)`)
+      `
+      )
       .eq("tor_id", id)
       .single();
     if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
     if (!torData) return res.status(404).json({ error: "TOR not found" });
 
-    // Step 2: Fetch TORDetail
+    // Step 2: ดึงข้อมูล TORDetail โดยระบุ Query อย่างชัดเจน
     const { data: detailData, error: detailError } = await supabase
       .from("TORDetail")
-      .select(`*`)
+      .select(
+        `
+        *,
+        tord_posible:MasterOptions!fk_tord_posible(option_label)
+      `
+      )
       .eq("tord_id", id);
     if (detailError)
       throw new Error(`Error fetching TORDetail: ${detailError.message}`);
@@ -61,17 +47,22 @@ router.get("/:id", async (req, res) => {
     }
     const detailObject = detailData[0];
 
-    // Step 3: Fetch related data in parallel
+    // Step 3: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดพร้อมกัน
     const [
       { data: feedbackData, error: feedbackError },
       { data: workedData, error: workedError },
       { data: presentationItems, error: pttItemsError },
     ] = await Promise.all([
-      supabase.from("PATFeedback").select("*").eq("tord_id", id),
-      supabase.from("PCSWorked").select("*").eq("tord_id", id),
+      supabase
+        .from("PATFeedback")
+        .select(
+          `*, feedback_status:MasterOptions!fk_patfeedback_status(option_label)`
+        )
+        .eq("tord_id", id),
+      supabase.from("PCSWorked").select(`*`).eq("tord_id", id), // สมมติว่า PCSWorked ไม่มี FK ไป MasterOptions
       supabase
         .from("PresentationItems")
-        .select("*, Presentation(*)")
+        .select(`*, Presentation(*)`)
         .eq("tord_id", id),
     ]);
 
@@ -84,7 +75,7 @@ router.get("/:id", async (req, res) => {
         `Error fetching PresentationItems: ${pttItemsError.message}`
       );
 
-    // Step 4: Assemble the final object
+    // Step 4: ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
     detailObject.PCSWorked = workedData || [];
     detailObject.PresentationItems = presentationItems || [];
