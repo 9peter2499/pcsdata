@@ -77,6 +77,10 @@ router.get("/:id", async (req, res) => {
     torData.TORDetail = detailData;
 
     // Step 3: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดพร้อมกัน
+    // --- เตรียม tord_id ที่เกี่ยวข้องทั้งหมด
+    const tordIds = detailData.map((d) => d.tord_id);
+
+    // --- ดึงทั้งหมดภายใน Promise.all
     const [
       { data: feedbackData, error: feedbackError },
       { data: workedData, error: workedError },
@@ -87,12 +91,14 @@ router.get("/:id", async (req, res) => {
         .select(
           `*, feedback_status:MasterOptions!fk_patfeedback_status(option_label)`
         )
-        .eq("tord_id", id),
-      supabase.from("PCSWorked").select(`*`).eq("tord_id", id), // สมมติว่า PCSWorked ไม่มี FK ไป MasterOptions
+        .in("tord_id", tordIds), // ✅ เปลี่ยนจาก .eq เป็น .in
+
+      supabase.from("PCSWorked").select("*").in("tord_id", tordIds), // ✅ เช่นกัน
+
       supabase
         .from("PresentationItems")
         .select(`*, Presentation(*)`)
-        .eq("tord_id", id),
+        .in("tord_id", tordIds), // ✅ เช่นกัน
     ]);
 
     if (feedbackError)
