@@ -1,35 +1,50 @@
 // routes/presentation.js
 const express = require("express");
 const router = express.Router();
-const supabase = require("../supabaseClient");
-const checkAdmin = require("../middlewares/checkAdmin"); // ถ้าต้องการให้เฉพาะ Admin ทำได้
+const checkAdmin = require("../middlewares/checkAdmin");
+
+// สำคัญ: เราจะ import createClient มาใช้สร้าง instance ใหม่
+const { createClient } = require("@supabase/supabase-js");
+
+// เราจะใช้ Environment Variables ที่ตั้งค่าไว้ใน Render.com
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 router.post("/", checkAdmin, async (req, res) => {
-  // 1. รับข้อมูลจาก Frontend
   const { ptt_type, ptt_date, ptt_timerange, ptt_remark, selected_tors } =
     req.body;
-  const user = req.user; // มาจาก Middleware checkAdmin
+  const user = req.user;
 
-  // ตรวจสอบข้อมูลเบื้องต้น
-  if (!ptt_type || !selected_tors || selected_tors.length === 0) {
-    return res
-      .status(400)
-      .json({ error: "Missing required presentation data or TOR selection." });
+  // 1. ดึง Token ของผู้ใช้ออกจาก Header
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Authorization token not found." });
   }
 
+  // 2. สร้าง Supabase client "เฉพาะกิจ" สำหรับ Request นี้
+  //    โดยใส่ Token ของผู้ใช้เข้าไป เพื่อให้ Supabase รู้ว่าใครเป็นคนสั่ง
+  const supabaseForUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
   try {
-    // 2. สร้างข้อมูลหลักในตาราง "Presentation" ก่อน
-    const { data: presentationData, error: presentationError } = await supabase
-      .from("Presentation")
-      .insert({
-        ptt_type,
-        ptt_date,
-        ptt_timerange,
-        ptt_remark,
-        ptt_by: user.email,
-      })
-      .select("ptt_id") // **สำคัญมาก: สั่งให้ trả về ptt_id ที่เพิ่งสร้าง**
-      .single();
+    // 3. ใช้ client เฉพาะกิจ (supabaseForUser) ในการ Query ทั้งหมด
+    const { data: presentationData, error: presentationError } =
+      await supabaseForUser
+        .from("Presentation")
+        .insert({
+          ptt_type,
+          ptt_date,
+          ptt_timerange,
+          ptt_remark,
+          ptt_by: user.email,
+        })
+        .select("ptt_id")
+        .single();
 
     if (presentationError) throw presentationError;
     if (!presentationData)
@@ -37,24 +52,24 @@ router.post("/", checkAdmin, async (req, res) => {
 
     const newPresentationId = presentationData.ptt_id;
 
-    // 3. เตรียมข้อมูลสำหรับตาราง "PresentationItems"
     const itemsToInsert = selected_tors.map((tor_id) => ({
       ptti_id: newPresentationId,
       tord_id: tor_id,
     }));
 
-    // 4. บันทึกข้อมูล Items ทั้งหมดลงใน "PresentationItems"
-    const { error: itemsError } = await supabase
+    // ใช้ client เดียวกันในการเพิ่มข้อมูล Items
+    const { error: itemsError } = await supabaseForUser
       .from("PresentationItems")
       .insert(itemsToInsert);
 
     if (itemsError) throw itemsError;
 
-    // 5. ส่งการยืนยันกลับไป
-    res.status(201).json({
-      message: "Presentation recorded successfully.",
-      ptt_id: newPresentationId,
-    });
+    res
+      .status(201)
+      .json({
+        message: "Presentation recorded successfully.",
+        ptt_id: newPresentationId,
+      });
   } catch (error) {
     console.error("Error creating presentation:", error.message);
     res.status(500).json({ error: error.message });
