@@ -21,10 +21,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (Step 3: เพิ่ม Feedback และ Worked) ---
+// --- GET: Single TOR by ID (Step 4: เพิ่ม PresentationItems) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] Step 3: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
+  console.log(`[API] Step 4: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
     // ดึงข้อมูลหลักของ TORs
@@ -53,7 +53,6 @@ router.get("/:id", async (req, res) => {
 
     const detailObject = detailData[0];
 
-    // --- ส่วนที่เพิ่มเข้ามา ---
     // ดึงข้อมูล Feedback และ Worked
     const { data: feedbackData, error: feedbackError } = await supabase
       .from("PATFeedback")
@@ -67,14 +66,24 @@ router.get("/:id", async (req, res) => {
       .eq("tord_id", id);
     if (workedError) throw workedError;
 
-    // ประกอบร่างข้อมูล
+    // --- ส่วนที่เพิ่มเข้ามา ---
+    // ดึงข้อมูล PresentationItems และข้อมูล Presentation ที่เชื่อมกันอยู่
+    const { data: presentationItems, error: pttError } = await supabase
+      .from("PresentationItems")
+      .select(`*, Presentation(*)`) // Query ที่อาจเป็นปัญหา
+      .eq("tord_id", id);
+
+    if (pttError) throw pttError;
+    // --- สิ้นสุดส่วนที่เพิ่มเข้ามา ---
+
+    // ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
     detailObject.PCSWorked = workedData || [];
-    // --- สิ้นสุดส่วนที่เพิ่มเข้ามา ---
+    detailObject.PresentationItems = presentationItems || []; // เพิ่มข้อมูลใหม่เข้าไป
 
     torData.TORDetail = [detailObject];
 
-    console.log(`[API] Step 3: ดึงข้อมูลสำเร็จ. กำลังส่งข้อมูลกลับ...`);
+    console.log(`[API] Step 4: ดึงข้อมูลสำเร็จ. กำลังส่งข้อมูลกลับ...`);
     res.status(200).json(torData);
   } catch (error) {
     console.error(
