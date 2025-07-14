@@ -3,16 +3,16 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
-const { addLog } = require("../services/logService");
 
 // --- GET: All TORs ---
+// (ส่วนนี้เหมือนเดิม ไม่ต้องแก้ไข)
 router.get("/", async (req, res) => {
   try {
     const { data, error } = await supabase.from("TORs").select(`
         *,
         Modules(*),
-        tor_status_option:MasterOptions!fk_tor_status(*),
-        tor_fixing_option:MasterOptions!fk_tor_fixing(*)
+        tor_status_option:MasterOptions!fk_tor_status(option_label),
+        tor_fixing_option:MasterOptions!fk_tor_fixing(option_label)
       `);
     if (error) throw error;
     res.status(200).json(data);
@@ -26,25 +26,51 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const { data, error } = await supabase
+    // 1. ดึงข้อมูลหลักของ TORs ก่อน
+    const { data: torData, error: torError } = await supabase
       .from("TORs")
       .select(
         `
         *,
         Modules(*),
-        tor_status_option:MasterOptions!fk_tor_status(*),
-        tor_fixing_option:MasterOptions!fk_tor_fixing(*),
-        TORDetail:TORDetail(*, PresentationItems(*, Presentation(*)))
-      `
+        tor_status_option:MasterOptions!fk_tor_status(option_label),
+        tor_fixing_option:MasterOptions!fk_tor_fixing(option_label)
+        `
       )
       .eq("tor_id", id)
       .single();
 
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: "TOR not found" });
+    if (torError) throw torError;
+    if (!torData) return res.status(404).json({ error: "TOR not found" });
 
-    res.status(200).json(data);
+    // 2. ดึงข้อมูล TORDetail ที่เกี่ยวข้อง
+    const { data: detailData, error: detailError } = await supabase
+      .from("TORDetail")
+      .select(`*, PATFeedback(*), PCSWorked(*)`)
+      .eq("tord_id", id);
+
+    if (detailError) throw detailError;
+
+    // 3. ดึงข้อมูล Presentation ที่เกี่ยวข้อง (ถ้ามี TORDetail)
+    if (detailData && detailData.length > 0) {
+      const { data: presentationItems, error: pttError } = await supabase
+        .from("PresentationItems")
+        .select(`*, Presentation(*)`)
+        .eq("tord_id", id);
+
+      if (pttError) throw pttError;
+
+      // นำข้อมูล Presentation ไปใส่ใน TORDetail
+      detailData[0].PresentationItems = presentationItems || [];
+    }
+
+    // 4. ประกอบร่างข้อมูลทั้งหมดกลับเข้าไปใน torData
+    torData.TORDetail = detailData || [];
+
+    // 5. ส่งข้อมูลที่ประกอบร่างเสร็จแล้วกลับไป
+    res.status(200).json(torData);
   } catch (error) {
+    console.error("Error fetching TOR detail:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
