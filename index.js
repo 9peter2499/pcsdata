@@ -47,6 +47,9 @@ const checkAdmin = require("./middlewares/checkAdmin");
 
 // 5. --- API Routes ---
 app.use("/api/log-action", require("./routes/log"));
+
+console.log("✅ Mounting /api/tors route...");
+
 app.use("/api/tors", require("./routes/tors"));
 app.use("/api/tordetail", require("./routes/tordetail"));
 app.use("/api/feedback", require("./routes/feedback"));
@@ -54,6 +57,7 @@ app.use("/api/worked", require("./routes/worked"));
 app.use("/api/summary", require("./routes/summary"));
 app.use("/api/options", require("./routes/options"));
 app.use("/api/presentation", require("./routes/presentation"));
+app.use("/api/presentation/dates", require("./routes/presentationDates"));
 //app.use("/api/debug", require("./routes/debug"));
 
 app.use((req, res, next) => {
