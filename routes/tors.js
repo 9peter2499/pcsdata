@@ -21,10 +21,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (The Definitive Debugging Version) ---
+// --- GET: Single TOR by ID (The Ultimate Fix Version) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] Final Debug: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
+  console.log(`[API] Ultimate Fix: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
     // Step 1: ดึงข้อมูลหลักของ TORs
@@ -53,67 +53,36 @@ router.get("/:id", async (req, res) => {
     const detailObject = detailData[0];
 
     // --- ส่วนที่แก้ไข ---
-    // Step 3: ดึงข้อมูล Feedback และ Worked แยกกัน และเพิ่มการตรวจสอบ Error
-    let feedbackData = [];
-    try {
-      const { data, error } = await supabase
-        .from("PATFeedback")
-        .select("*")
-        .eq("tord_id", id);
-      if (error) throw error;
-      feedbackData = data;
-      console.log("[API] Step 3.1: ดึงข้อมูล PATFeedback สำเร็จ");
-    } catch (feedbackError) {
-      console.error(
-        "[API ERROR] เกิดข้อผิดพลาดตอนดึง PATFeedback:",
-        feedbackError.message
-      );
-      // ไม่ต้องหยุดทำงาน แต่ให้ข้อมูลเป็น Array ว่างไปก่อน
-    }
+    // Step 3: ดึงข้อมูล Feedback และ Worked โดยระบุ Query อย่างชัดเจน
+    const { data: feedbackData, error: feedbackError } = await supabase
+      .from("PATFeedback")
+      .select(
+        `*, feedback_status:MasterOptions!feedback_status_id(option_label)`
+      ) // ระบุ Foreign Key อย่างชัดเจน
+      .eq("tord_id", id);
+    if (feedbackError)
+      throw new Error(`Error fetching PATFeedback: ${feedbackError.message}`);
+    console.log("[API] Step 3.1: ดึงข้อมูล PATFeedback สำเร็จ");
 
-    let workedData = [];
-    try {
-      const { data, error } = await supabase
-        .from("PCSWorked")
-        .select("*")
-        .eq("tord_id", id);
-      if (error) throw error;
-      workedData = data;
-      console.log("[API] Step 3.2: ดึงข้อมูล PCSWorked สำเร็จ");
-    } catch (workedError) {
-      console.error(
-        "[API ERROR] เกิดข้อผิดพลาดตอนดึง PCSWorked:",
-        workedError.message
-      );
-    }
+    const { data: workedData, error: workedError } = await supabase
+      .from("PCSWorked")
+      .select(`*, worked_status:MasterOptions!worked_status_id(option_label)`) // ระบุ Foreign Key อย่างชัดเจน
+      .eq("tord_id", id);
+    if (workedError)
+      throw new Error(`Error fetching PCSWorked: ${workedError.message}`);
+    console.log("[API] Step 3.2: ดึงข้อมูล PCSWorked สำเร็จ");
     // --- สิ้นสุดส่วนที่แก้ไข ---
 
     // Step 4: ดึงข้อมูล PresentationItems
     const { data: presentationItems, error: pttItemsError } = await supabase
       .from("PresentationItems")
-      .select(`*`)
+      .select(`*, Presentation(*)`)
       .eq("tord_id", id);
     if (pttItemsError)
       throw new Error(
         `Error fetching PresentationItems: ${pttItemsError.message}`
       );
     console.log("[API] Step 4: ดึงข้อมูล PresentationItems สำเร็จ");
-
-    if (presentationItems && presentationItems.length > 0) {
-      const presentationIds = presentationItems.map((item) => item.ptti_id);
-      const { data: presentations, error: pttError } = await supabase
-        .from("Presentation")
-        .select("*")
-        .in("ptt_id", presentationIds);
-      if (pttError)
-        throw new Error(`Error fetching Presentation: ${pttError.message}`);
-      console.log("[API] Step 4.5: ดึงข้อมูล Presentation สำเร็จ");
-
-      presentationItems.forEach((item) => {
-        item.Presentation =
-          presentations.find((p) => p.ptt_id === item.ptti_id) || null;
-      });
-    }
 
     // Step 5: ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
