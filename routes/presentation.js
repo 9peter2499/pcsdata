@@ -2,9 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const checkAdmin = require("../middlewares/checkAdmin");
-
-// 1. Import createClient และ Environment Variables
 const { createClient } = require("@supabase/supabase-js");
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
@@ -18,8 +17,6 @@ router.post("/", checkAdmin, async (req, res) => {
     return res.status(401).json({ error: "Authorization token not found." });
   }
 
-  // 2. สร้าง Supabase client "เฉพาะกิจ" สำหรับ Request นี้
-  //    โดยใส่ Token ของผู้ใช้เข้าไป เพื่อให้ Supabase รู้ว่าใครเป็นคนสั่ง
   const supabaseForUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: {
       headers: {
@@ -29,7 +26,6 @@ router.post("/", checkAdmin, async (req, res) => {
   });
 
   try {
-    // 3. ใช้ client เฉพาะกิจ (supabaseForUser) ในการ Query ทั้งหมด
     const { data: presentationData, error: presentationError } =
       await supabaseForUser
         .from("Presentation")
@@ -43,9 +39,14 @@ router.post("/", checkAdmin, async (req, res) => {
         .select("ptt_id")
         .single();
 
-    if (presentationError) throw presentationError;
-    if (!presentationData)
+    // --- ส่วนที่แก้ไข ---
+    if (presentationError) {
+      // ส่งข้อความ Error ที่ชัดเจนกลับไป
+      throw new Error(presentationError.message);
+    }
+    if (!presentationData) {
       throw new Error("Failed to create presentation record.");
+    }
 
     const newPresentationId = presentationData.ptt_id;
 
@@ -54,12 +55,15 @@ router.post("/", checkAdmin, async (req, res) => {
       tord_id: tor_id,
     }));
 
-    // ใช้ client เดียวกันในการเพิ่มข้อมูล Items
     const { error: itemsError } = await supabaseForUser
       .from("PresentationItems")
       .insert(itemsToInsert);
 
-    if (itemsError) throw itemsError;
+    // --- ส่วนที่แก้ไข ---
+    if (itemsError) {
+      // ส่งข้อความ Error ที่ชัดเจนกลับไป
+      throw new Error(itemsError.message);
+    }
 
     res.status(201).json({
       message: "Presentation recorded successfully.",
@@ -67,6 +71,7 @@ router.post("/", checkAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating presentation:", error.message);
+    // ส่ง Error กลับไปพร้อมข้อความที่ชัดเจน
     res.status(500).json({ error: error.message });
   }
 });
