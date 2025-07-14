@@ -5,6 +5,32 @@ const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
 const { addLog } = require("../services/logService");
 
+// --- GET: All TORs ---
+router.get("/", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("TORs")
+      .select(
+        `
+        tor_id,
+        tor_name,
+        created_at,
+        Modules(module_name),
+        tor_status:MasterOptions!fk_tor_status(option_label),
+        tor_fixing:MasterOptions!fk_tor_fixing(option_label)
+      `
+      )
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching all TORs:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- GET: Single TOR by ID (The Definitive Fix Version) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
