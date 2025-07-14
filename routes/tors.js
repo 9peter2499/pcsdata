@@ -54,16 +54,17 @@ router.get("/:id", async (req, res) => {
     if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
     if (!torData) return res.status(404).json({ error: "TOR not found" });
 
-    // Step 2: ดึงข้อมูล TORDetail โดยระบุ Query อย่างชัดเจน
+    // Step 2: ดึงข้อมูล TORDetail โดยใช้ tor_id
     const { data: detailData, error: detailError } = await supabase
       .from("TORDetail")
       .select(
         `
-        *,
-        tord_posible:MasterOptions!fk_tord_posible(option_label)
-      `
+    *,
+    tord_posible:MasterOptions!fk_tord_posible(option_label)
+  `
       )
-      .eq("tord_id", id);
+      .eq("tor_id", id); // ✅ ใช้ foreign key เชื่อม TORs
+
     if (detailError)
       throw new Error(`Error fetching TORDetail: ${detailError.message}`);
 
@@ -71,7 +72,9 @@ router.get("/:id", async (req, res) => {
       torData.TORDetail = [];
       return res.status(200).json(torData);
     }
-    const detailObject = detailData[0];
+
+    // ใช้ทั้งหมด ไม่ใช่เฉพาะ index 0
+    torData.TORDetail = detailData;
 
     // Step 3: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดพร้อมกัน
     const [
