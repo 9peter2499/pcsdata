@@ -5,64 +5,50 @@ const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
 const { addLog } = require("../services/logService");
 
-// --- GET: All TORs --- (ส่วนนี้ทำงานถูกต้องแล้ว)
-router.get("/", async (req, res) => {
-  try {
-    const { data, error } = await supabase.from("TORs").select(`
-        *,
-        Modules(*),
-        tor_status_option:MasterOptions!fk_tor_status(option_label),
-        tor_fixing_option:MasterOptions!fk_tor_fixing(option_label)
-      `);
-    if (error) throw error;
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// --- GET: Single TOR by ID (The Definitive Fix Version) ---
+// --- GET: Single TOR by ID (The Final Version) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] Definitive Fix: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
-    // Step 1: ดึงข้อมูลหลักของ TORs และข้อมูล Modules ที่เชื่อมกัน
+    // Step 1: ดึงข้อมูลหลักของ TORs
     const { data: torData, error: torError } = await supabase
       .from("TORs")
-      .select(`*, Modules(*)`) // ดึง Modules มาด้วย
+      .select(`*, Modules(*)`)
       .eq("tor_id", id)
       .single();
+
     if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
     if (!torData) return res.status(404).json({ error: "TOR not found" });
-    console.log("[API] Step 1: ดึงข้อมูล TORs สำเร็จ");
 
     // Step 2: ดึงข้อมูล TORDetail
     const { data: detailData, error: detailError } = await supabase
       .from("TORDetail")
       .select(`*`)
       .eq("tord_id", id);
+
     if (detailError)
       throw new Error(`Error fetching TORDetail: ${detailError.message}`);
-    console.log("[API] Step 2: ดึงข้อมูล TORDetail สำเร็จ");
 
     // ถ้าไม่มีข้อมูล Detail ให้ส่งข้อมูลหลักกลับไปเลย
     if (!detailData || detailData.length === 0) {
       torData.TORDetail = [];
       return res.status(200).json(torData);
     }
+
     const detailObject = detailData[0];
 
-    // --- ส่วนที่แก้ไข ---
-    // Step 3 & 4: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดแบบแยกส่วน (Flat Queries)
+    // Step 3: ดึงข้อมูลที่เกี่ยวข้องทั้งหมดพร้อมกันโดยใช้ Promise.all
     const [
       { data: feedbackData, error: feedbackError },
       { data: workedData, error: workedError },
-      { data: presentationItems, error: pttItemsError },
+      { data: presentationItemsData, error: pttItemsError },
     ] = await Promise.all([
       supabase.from("PATFeedback").select("*").eq("tord_id", id),
       supabase.from("PCSWorked").select("*").eq("tord_id", id),
-      supabase.from("PresentationItems").select("*").eq("tord_id", id),
+      supabase
+        .from("PresentationItems")
+        .select("*, Presentation(*)")
+        .eq("tord_id", id),
     ]);
 
     if (feedbackError)
@@ -73,36 +59,12 @@ router.get("/:id", async (req, res) => {
       throw new Error(
         `Error fetching PresentationItems: ${pttItemsError.message}`
       );
-    console.log(
-      "[API] Step 3 & 4: ดึงข้อมูล Feedback, Worked, และ PresentationItems สำเร็จ"
-    );
 
-    // Step 4.5: ดึงข้อมูล Presentation หลัก ถ้ามี Items
-    if (presentationItems && presentationItems.length > 0) {
-      const presentationIds = presentationItems.map((item) => item.ptti_id);
-      const { data: presentations, error: pttError } = await supabase
-        .from("Presentation")
-        .select("*")
-        .in("ptt_id", presentationIds);
-
-      if (pttError)
-        throw new Error(`Error fetching Presentation: ${pttError.message}`);
-
-      // นำข้อมูล Presentation กลับไปรวมกับ PresentationItems
-      presentationItems.forEach((item) => {
-        item.Presentation =
-          presentations.find((p) => p.ptt_id === item.ptti_id) || null;
-      });
-    }
-    console.log("[API] Step 4.5: ดึงและประกอบร่าง Presentation สำเร็จ");
-    // --- สิ้นสุดส่วนที่แก้ไข ---
-
-    // Step 5: ประกอบร่างข้อมูลทั้งหมด
+    // Step 4: ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
     detailObject.PCSWorked = workedData || [];
-    detailObject.PresentationItems = presentationItems || [];
+    detailObject.PresentationItems = presentationItemsData || [];
     torData.TORDetail = [detailObject];
-    console.log("[API] Step 5: ประกอบร่างข้อมูลทั้งหมดสำเร็จ");
 
     res.status(200).json(torData);
   } catch (error) {
