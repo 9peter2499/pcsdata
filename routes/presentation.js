@@ -26,9 +26,7 @@ router.post("/", checkAdmin, async (req, res) => {
         ptt_date,
         ptt_timerange,
         ptt_remark,
-        ptt_by: user.email, // หรือ user.id ตามต้องการ
-        created_by: user.id,
-        updated_by: user.id,
+        ptt_by: user.email,
       })
       .select("ptt_id") // **สำคัญมาก: สั่งให้ trả về ptt_id ที่เพิ่งสร้าง**
       .single();
@@ -53,12 +51,10 @@ router.post("/", checkAdmin, async (req, res) => {
     if (itemsError) throw itemsError;
 
     // 5. ส่งการยืนยันกลับไป
-    res
-      .status(201)
-      .json({
-        message: "Presentation recorded successfully.",
-        ptt_id: newPresentationId,
-      });
+    res.status(201).json({
+      message: "Presentation recorded successfully.",
+      ptt_id: newPresentationId,
+    });
   } catch (error) {
     console.error("Error creating presentation:", error.message);
     res.status(500).json({ error: error.message });
