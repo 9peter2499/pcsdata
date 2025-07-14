@@ -21,10 +21,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// --- GET: Single TOR by ID (The Definitive Version) ---
+// --- GET: Single TOR by ID (The Definitive Debugging Version) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-  console.log(`[API] Final Version: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
+  console.log(`[API] Final Debug: กำลังดึงข้อมูลสำหรับ TOR ID: ${id}`);
 
   try {
     // Step 1: ดึงข้อมูลหลักของ TORs
@@ -33,24 +33,23 @@ router.get("/:id", async (req, res) => {
       .select(`*`)
       .eq("tor_id", id)
       .single();
-
-    if (torError) throw torError;
+    if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
     if (!torData) return res.status(404).json({ error: "TOR not found" });
+    console.log("[API] Step 1: ดึงข้อมูล TORs สำเร็จ");
 
     // Step 2: ดึงข้อมูล TORDetail
     const { data: detailData, error: detailError } = await supabase
       .from("TORDetail")
       .select(`*`)
       .eq("tord_id", id);
+    if (detailError)
+      throw new Error(`Error fetching TORDetail: ${detailError.message}`);
+    console.log("[API] Step 2: ดึงข้อมูล TORDetail สำเร็จ");
 
-    if (detailError) throw detailError;
-
-    // ถ้าไม่มีข้อมูล Detail ให้ส่งข้อมูลหลักกลับไปเลย
     if (!detailData || detailData.length === 0) {
       torData.TORDetail = [];
       return res.status(200).json(torData);
     }
-
     const detailObject = detailData[0];
 
     // Step 3: ดึงข้อมูล Feedback และ Worked
@@ -62,44 +61,42 @@ router.get("/:id", async (req, res) => {
       .from("PCSWorked")
       .select("*")
       .eq("tord_id", id);
+    console.log("[API] Step 3: ดึงข้อมูล Feedback และ Worked สำเร็จ");
 
-    // --- ส่วนที่แก้ไข ---
-    // Step 4: ดึงข้อมูล PresentationItems และ Presentation แยกกัน
+    // Step 4: ดึงข้อมูล PresentationItems
     const { data: presentationItems, error: pttItemsError } = await supabase
       .from("PresentationItems")
       .select(`*`)
       .eq("tord_id", id);
-
-    if (pttItemsError) throw pttItemsError;
+    if (pttItemsError)
+      throw new Error(
+        `Error fetching PresentationItems: ${pttItemsError.message}`
+      );
+    console.log("[API] Step 4: ดึงข้อมูล PresentationItems สำเร็จ");
 
     if (presentationItems && presentationItems.length > 0) {
-      // ดึง ptt_id ทั้งหมดออกมา
       const presentationIds = presentationItems.map((item) => item.ptti_id);
-
-      // ดึงข้อมูลจากตาราง Presentation ที่มี id ตรงกัน
       const { data: presentations, error: pttError } = await supabase
-        .from("Presentation")
+        .from("Presentation") // ใช้ชื่อตารางตาม Schema
         .select("*")
         .in("ptt_id", presentationIds);
+      if (pttError)
+        throw new Error(`Error fetching Presentation: ${pttError.message}`);
+      console.log("[API] Step 4.5: ดึงข้อมูล Presentation สำเร็จ");
 
-      if (pttError) throw pttError;
-
-      // นำข้อมูล Presentation กลับไปรวมกับ PresentationItems
       presentationItems.forEach((item) => {
         item.Presentation =
           presentations.find((p) => p.ptt_id === item.ptti_id) || null;
       });
     }
-    // --- สิ้นสุดส่วนที่แก้ไข ---
 
     // Step 5: ประกอบร่างข้อมูลทั้งหมด
     detailObject.PATFeedback = feedbackData || [];
     detailObject.PCSWorked = workedData || [];
     detailObject.PresentationItems = presentationItems || [];
-
     torData.TORDetail = [detailObject];
+    console.log("[API] Step 5: ประกอบร่างข้อมูลสำเร็จ");
 
-    console.log(`[API] Final Version: ดึงข้อมูลสำเร็จ. กำลังส่งข้อมูลกลับ...`);
     res.status(200).json(torData);
   } catch (error) {
     console.error(
