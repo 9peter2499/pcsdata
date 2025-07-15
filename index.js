@@ -58,6 +58,7 @@ app.use("/api/summary", require("./routes/summary"));
 app.use("/api/options", require("./routes/options"));
 app.use("/api/presentation", require("./routes/presentation"));
 app.use("/api/presentation/dates", require("./routes/presentationDates"));
+app.use("/api/presentation/dates", require("./routes/presentationLastUpdated"));
 //app.use("/api/debug", require("./routes/debug"));
 
 app.use((req, res, next) => {

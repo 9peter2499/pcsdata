@@ -15,7 +15,7 @@ router.get("/", async (req, res) => {
         tor_id,
         tor_name,
         created_at,
-        Modules(module_name),
+        Modules(module_id,module_name),
         tor_status:MasterOptions!fk_tor_status(option_label),
         tor_fixing:MasterOptions!fk_tor_fixing(option_label)
       `
@@ -44,7 +44,7 @@ router.get("/:id", async (req, res) => {
         tor_id,
         tor_name,
         created_at,
-        Modules(module_name),
+        Modules(module_id,module_name),
         tor_status:MasterOptions!fk_tor_status(option_label),
         tor_fixing:MasterOptions!fk_tor_fixing(option_label)
       `
