@@ -18,8 +18,8 @@ router.get("/", async (req, res) => {
           tor_fixing_id,
           created_at,
           Modules(module_id,module_name),
-          tor_status:MasterOptions!fk_tor_status(option_label),
-          tor_fixing:MasterOptions!fk_tor_fixing(option_label)
+          tor_status:MasterOptions!fk_tor_status(option_id, option_label),
+          tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label)
       `
       )
       .order("created_at", { ascending: false });
@@ -49,8 +49,8 @@ router.get("/:id", async (req, res) => {
           tor_fixing_id,
           created_at,
           Modules(module_id,module_name),
-          tor_status:MasterOptions!fk_tor_status(option_label),
-          tor_fixing:MasterOptions!fk_tor_fixing(option_label)
+          tor_status:MasterOptions!fk_tor_status(option_id, option_label),
+          tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label)
       `
       )
       .eq("tor_id", id)
