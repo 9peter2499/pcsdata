@@ -1,13 +1,13 @@
-/ routes/presentation.js
+// routes/presentation.js
 const express = require("express");
 const router = express.Router();
 const checkAdmin = require("../middlewares/checkAdmin");
 
 // ✅ --- ส่วนที่แก้ไข ---
 // 1. Import Supabase client ตัวกลางเข้ามา
-const supabase = require("../supabaseClient"); 
+const supabase = require("../supabaseClient");
 // 2. Import createClient สำหรับใช้ใน POST endpoint
-const { createClient } = require("@supabase/supabase-js"); 
+const { createClient } = require("@supabase/supabase-js");
 // --- สิ้นสุดส่วนที่แก้ไข ---
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -86,20 +86,20 @@ router.post("/", checkAdmin, async (req, res) => {
 router.get("/dates", async (req, res) => {
   try {
     // ✅ ตอนนี้โค้ดสามารถใช้ตัวแปร supabase ที่ import เข้ามาได้แล้ว
-    const { data, error } = await supabase.rpc('get_distinct_presentation_dates');
+    const { data, error } = await supabase.rpc(
+      "get_distinct_presentation_dates"
+    );
 
     if (error) {
       throw error;
     }
-    
-    const dates = data.map(item => item.ptt_date);
-    res.status(200).json(dates);
 
+    const dates = data.map((item) => item.ptt_date);
+    res.status(200).json(dates);
   } catch (error) {
     console.error("Error fetching distinct presentation dates:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
-
 
 module.exports = router;
