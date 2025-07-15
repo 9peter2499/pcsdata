@@ -57,11 +57,11 @@ app.use("/api/worked", require("./routes/worked"));
 app.use("/api/summary", require("./routes/summary"));
 app.use("/api/options", require("./routes/options"));
 app.use("/api/presentation", require("./routes/presentation"));
-//app.use("/api/presentation/dates", require("./routes/presentationDates")); // สำหรับ dropdown
+app.use("/api/presentation/dates", require("./routes/presentationDates"));
 app.use(
-  "/api/presentation/latest-date",
+  "/api/presentation/last-updated",
   require("./routes/presentationLastUpdated")
-); // สำหรับ "ข้อมูลอัปเดตล่าสุด"
+);
 
 //app.use("/api/debug", require("./routes/debug"));
 
