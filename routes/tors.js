@@ -5,31 +5,36 @@ const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
 const { addLog } = require("../services/logService");
 
-// --- GET: All TORs ---
+// routes/tors.js
+
+// --- GET: All TORs (The Final Correct Version) ---
 router.get("/", async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("TORs")
-      .select(
-        `
-          tor_id,
-          tor_name,
-          tor_status_id,
-          tor_fixing_id,
-          created_at,
-          Modules(module_id,module_name),
-          tor_status:MasterOptions!fk_tor_status(option_id, option_label),
-          tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label)
-      `
-      )
-      .order("created_at", { ascending: false });
+    // แก้ไข Query ให้ดึงข้อมูลที่จำเป็นสำหรับการ Filter มาด้วยทั้งหมด
+    const { data, error } = await supabase.from("TORs").select(`
+        tor_id,
+        tor_name,
+        created_at,
+        tor_status_id, 
+        tor_fixing_id,
+        Modules(*),
+        tor_status:MasterOptions!fk_tor_status(option_id, option_label),
+        tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label),
+        TORDetail (
+          tord_id,
+          PresentationItems (
+            Presentation ( ptt_date )
+          )
+        )
+      `);
 
     if (error) throw error;
 
+    // ส่งข้อมูลดิบที่ได้กลับไปให้ Frontend จัดการต่อ
     res.status(200).json(data);
   } catch (error) {
-    console.error("Error fetching all TORs:", error.message);
-    res.status(500).json({ error: error.message });
+    console.error("[API ERROR] GET /tors failed:", error.message);
+    res.status(500).json({ error: "Failed to fetch TOR list." });
   }
 });
 
