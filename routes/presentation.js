@@ -76,4 +76,26 @@ router.post("/", checkAdmin, async (req, res) => {
   }
 });
 
+// --- GET: Distinct Presentation Dates ---
+router.get("/dates", async (req, res) => {
+  try {
+    // เรียกใช้ RPC function ที่เราสร้างไว้ใน Supabase
+    const { data, error } = await supabase.rpc(
+      "get_distinct_presentation_dates"
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    // ข้อมูลที่ได้จะเป็น array ของ object, เราต้องดึงเฉพาะค่าวันที่ออกมา
+    const dates = data.map((item) => item.ptt_date);
+
+    res.status(200).json(dates);
+  } catch (error) {
+    console.error("Error fetching distinct presentation dates:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
