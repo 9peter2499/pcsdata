@@ -2,13 +2,16 @@
 const express = require("express");
 const router = express.Router();
 const checkAdmin = require("../middlewares/checkAdmin");
-
-// สำคัญ: เราจะ import createClient มาใช้สร้าง instance ใหม่
 const { createClient } = require("@supabase/supabase-js");
 
-// เราจะใช้ Environment Variables ที่ตั้งค่าไว้ใน Render.com
+// ดึงค่าจาก Environment Variables
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+// --- จุดที่แก้ไข ---
+// สร้าง Supabase client กลางสำหรับใช้ในไฟล์นี้
+// Client ตัวนี้จะใช้สำหรับ Query ที่ไม่ต้องยืนยันตัวตนผู้ใช้เป็นพิเศษ
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 router.post("/", checkAdmin, async (req, res) => {
   const {
