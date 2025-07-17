@@ -86,35 +86,18 @@ router.post("/", checkAdmin, async (req, res) => {
   }
 });
 
-// --- GET: Distinct Presentation Dates (เวอร์ชัน Debug) ---
+// --- GET: Distinct Presentation Dates (เวอร์ชันทดสอบโดยไม่ใช้ฐานข้อมูล) ---
 router.get("/dates", async (req, res) => {
   try {
-    console.log("[DEBUG] Inside /dates endpoint - Starting query...");
+    console.log("[DEBUG] กำลังทดสอบ /dates endpoint โดยการส่งข้อมูลปลอม...");
 
-    // ใช้ Query ที่ง่ายที่สุดเพื่อดึงข้อมูลวันที่ทั้งหมด
-    const { data, error } = await supabase
-      .from("Presentation")
-      .select("ptt_date");
+    // สร้างข้อมูลวันที่ปลอมๆ ขึ้นมาเพื่อทดสอบ
+    const fakeDates = ["2025-07-15", "2025-07-14", "2025-07-13"];
 
-    if (error) {
-      console.error("[DEBUG] Error from Supabase query:", error);
-      throw error;
-    }
+    console.log("[DEBUG] ส่งข้อมูลปลอมสำเร็จ:", fakeDates);
 
-    console.log(`[DEBUG] Successfully fetched ${data.length} date records.`);
-
-    if (!data) {
-      return res.status(200).json([]);
-    }
-
-    // กรองและจัดเรียงข้อมูลด้วย JavaScript เพื่อความแน่นอน
-    const distinctDates = [
-      ...new Set(data.map((item) => item.ptt_date).filter(Boolean)),
-    ];
-    distinctDates.sort((a, b) => new Date(b) - new Date(a));
-
-    console.log("[DEBUG] Processed distinct dates:", distinctDates);
-    res.status(200).json(distinctDates);
+    // ส่งข้อมูลปลอมกลับไปที่ Frontend
+    res.status(200).json(fakeDates);
   } catch (error) {
     console.error("[DEBUG] CATCH block error in /dates:", error.message);
     res.status(500).json({ error: "Failed to get dates: " + error.message });
