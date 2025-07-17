@@ -76,22 +76,49 @@ router.post("/", checkAdmin, async (req, res) => {
       throw new Error(itemsError.message);
     }
 
-    res
-      .status(201)
-      .json({
-        message: "Presentation recorded successfully.",
-        ptt_id: newPresentationId,
-      });
+    res.status(201).json({
+      message: "Presentation recorded successfully.",
+      ptt_id: newPresentationId,
+    });
   } catch (error) {
     console.error("Error creating presentation:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// --- GET: Distinct Presentation Dates ---
-// (โค้ดส่วนนี้ให้ใช้เวอร์ชันล่าสุดที่คุณมี)
+// --- GET: Distinct Presentation Dates (เวอร์ชัน Debug) ---
 router.get("/dates", async (req, res) => {
-  // ...
+  try {
+    console.log("[DEBUG] Inside /dates endpoint - Starting query...");
+
+    // ใช้ Query ที่ง่ายที่สุดเพื่อดึงข้อมูลวันที่ทั้งหมด
+    const { data, error } = await supabase
+      .from("Presentation")
+      .select("ptt_date");
+
+    if (error) {
+      console.error("[DEBUG] Error from Supabase query:", error);
+      throw error;
+    }
+
+    console.log(`[DEBUG] Successfully fetched ${data.length} date records.`);
+
+    if (!data) {
+      return res.status(200).json([]);
+    }
+
+    // กรองและจัดเรียงข้อมูลด้วย JavaScript เพื่อความแน่นอน
+    const distinctDates = [
+      ...new Set(data.map((item) => item.ptt_date).filter(Boolean)),
+    ];
+    distinctDates.sort((a, b) => new Date(b) - new Date(a));
+
+    console.log("[DEBUG] Processed distinct dates:", distinctDates);
+    res.status(200).json(distinctDates);
+  } catch (error) {
+    console.error("[DEBUG] CATCH block error in /dates:", error.message);
+    res.status(500).json({ error: "Failed to get dates: " + error.message });
+  }
 });
 
 module.exports = router;
