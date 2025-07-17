@@ -8,10 +8,24 @@ const { createClient } = require("@supabase/supabase-js");
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-// --- จุดที่แก้ไข ---
+// --- DEBUGGING: ตรวจสอบว่า Environment Variables ถูกโหลดมาหรือไม่ ---
+console.log("--- Supabase Config Check ---");
+console.log("Is SUPABASE_URL loaded:", !!SUPABASE_URL); // ควรจะแสดง true
+console.log("Is SUPABASE_ANON_KEY loaded:", !!SUPABASE_ANON_KEY); // ควรจะแสดง true
+// ----------------------------------------------------------------
+
 // สร้าง Supabase client กลางสำหรับใช้ในไฟล์นี้
-// Client ตัวนี้จะใช้สำหรับ Query ที่ไม่ต้องยืนยันตัวตนผู้ใช้เป็นพิเศษ
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- DEBUGGING: ตรวจสอบว่า client สร้างสำเร็จหรือไม่ ---
+if (supabase) {
+  console.log("Supabase client created successfully.");
+} else {
+  console.error("!!! Supabase client creation FAILED.");
+}
+// ----------------------------------------------------
+
+// --- POST: Create a new Presentation  ---
 
 router.post("/", checkAdmin, async (req, res) => {
   const {
