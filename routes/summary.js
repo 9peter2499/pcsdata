@@ -52,7 +52,12 @@ router.get("/", async (req, res) => {
       }
     });
 
-    const modulesArray = Object.values(summary);
+    //const modulesArray = Object.values(summary);
+
+    const modulesArray = Object.values(summary).sort((a, b) =>
+      a.module_name.localeCompare(b.module_name)
+    );
+
     res.status(200).json({
       lastUpdated: new Date().toISOString(),
       modules: modulesArray,
