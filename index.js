@@ -8,7 +8,16 @@ const http = require("http");
 const supabase = require("./supabaseClient");
 
 // 2. --- App Setup ---
+// const app = express();
+// const PORT = process.env.PORT || 3000;
+// const server = http.createServer(app);
+
+// 2. --- App Setup ---
 const app = express();
+
+// ✅ เพิ่มบรรทัดนี้เพื่อเชื่อใจ Proxy ของ Render
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
