@@ -55,7 +55,7 @@ router.get("/", async (req, res) => {
     //const modulesArray = Object.values(summary);
 
     const modulesArray = Object.values(summary).sort((a, b) =>
-      a.module_name.localeCompare(b.module_name)
+      a.module_id.localeCompare(b.module_id)
     );
 
     res.status(200).json({
