@@ -4,20 +4,12 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
-const http = require("http");
+http = require("http");
 const supabase = require("./supabaseClient");
 
 // 2. --- App Setup ---
-// const app = express();
-// const PORT = process.env.PORT || 3000;
-// const server = http.createServer(app);
-
-// 2. --- App Setup ---
 const app = express();
-
-// ✅ เพิ่มบรรทัดนี้เพื่อเชื่อใจ Proxy ของ Render
-app.set("trust proxy", 1);
-
+app.set("trust proxy", 1); // เชื่อใจ Proxy ของ Render
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
@@ -25,6 +17,14 @@ server.keepAliveTimeout = 120000;
 server.headersTimeout = 120000;
 
 // 3. --- Middleware ---
+
+// ✅ --- ย้าย allowedOrigins มาประกาศไว้ก่อนใช้งาน ---
+const allowedOrigins = [
+  "https://dp-web-lyfe.onrender.com",
+  // ใส่ URL อื่นๆ ที่ต้องการอนุญาตได้ที่นี่ เช่น localhost สำหรับทดสอบ
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+];
 
 app.use(
   cors({
@@ -45,8 +45,6 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests from this IP, please try again later." },
 });
 
-const allowedOrigins = ["https://dp-web-lyfe.onrender.com"];
-
 app.use(express.json());
 app.use("/api/", apiLimiter);
 
@@ -55,10 +53,14 @@ const { addLog } = require("./services/logService");
 const checkAdmin = require("./middlewares/checkAdmin");
 
 // 5. --- API Routes ---
+
+// ✅ --- เพิ่ม Route สำหรับ Health Check ที่ Root URL ---
+app.get("/", (req, res) => {
+  res.send("PCS API is alive and running! 🎉");
+});
+
 app.use("/api/log-action", require("./routes/log"));
-
 console.log("✅ Mounting /api/tors route...");
-
 app.use("/api/tors", require("./routes/tors"));
 app.use("/api/tordetail", require("./routes/tordetail"));
 app.use("/api/feedback", require("./routes/feedback"));
@@ -71,8 +73,6 @@ app.use(
   "/api/presentation/last-updated",
   require("./routes/presentationLastUpdated")
 );
-
-//app.use("/api/debug", require("./routes/debug"));
 
 app.use((req, res, next) => {
   console.log(`📥 Request: ${req.method} ${req.originalUrl}`);
