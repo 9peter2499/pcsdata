@@ -3,20 +3,19 @@ const express = require("express");
 const router = express.Router();
 const supabase = require("../supabaseClient");
 
-// ✅ 1. กำหนดลำดับที่ต้องการเอง (Custom Order)
 const CUSTOM_SORT_ORDER = [
-  "01. คุณสมบัติทั่วไปของระบบ",
-  "02. ระบบกิจกรรมเรือ (Vessel)",
-  "03. ระบบกิจกรรมนำเข้า (Import)",
-  "04. ระบบกิจกรรมศุลกากร (Customs)",
-  "05. ระบบกิจกรรมส่งออก (Export)",
-  "06. ระบบกิจกรรมทางด้านตู้และสินค้า (Container and Cargo)",
-  "07. ระบบกิจกรรมการขนส่งด้านหลังท่า (Hinterland)",
-  "08. ระบบกิจกรรมธนาคาร (Banking)",
-  "09. ระบบบริการข้อมูลทางธุรกิจอัจฉริยะ (PCS Intelligence)",
-  "10. ระบบตั้งค่าระบบ และเครื่องมือที่ช่วยในการทำงาน (Setup & Utility)",
-  "11. ระบบผู้ดูแลระบบในการจัดการผู้ใช้ และสิทธิ์การใช้งาน (Administration)",
-  "12. ระบบรายงาน (Reports)",
+  "คุณสมบัติทั่วไปของระบบ",
+  "ระบบสำหรับกิจกรรมเรือ (Vessel)",
+  "ระบบสำหรับกิจกรรมนำเข้า (Import)",
+  "ระบบสำหรับกิจกรรมศุลกากร (Customs)",
+  "ระบบสำหรับกิจกรรมส่งออก (Export)",
+  "ระบบสำหรับกิจกรรมทางด้านตู้และสินค้า (Container and Cargo)",
+  "ระบบสำหรับกิจกรรมการขนส่งด้านหลังท่า (Hinterland)",
+  "ระบบสำหรับกิจกรรมธนาคาร (Banking)",
+  "ระบบสำหรับบริการข้อมูลทางธุรกิจอัจฉริยะ (PCS Intelligence)",
+  "ระบบสำหรับการกำหนดตั้งค่าระบบ และเครื่องมือที่ช่วยในการทำงาน (Setup & Utility)",
+  "ระบบสำหรับผู้ดูแลระบบในการจัดการผู้ใช้ และสิทธิ์การใช้งาน (Administration)",
+  "ระบบรายงาน (Reports)",
 ];
 
 router.get("/", async (req, res) => {
@@ -68,14 +67,33 @@ router.get("/", async (req, res) => {
       }
     });
 
+    // ✅ เพิ่มบรรทัดนี้เข้ามาในตำแหน่งที่ถูกต้อง
     const modulesArray = Object.values(summary);
 
-    // ✅ 2. ใช้ Custom Order ที่กำหนดไว้ในการเรียงลำดับ
-    modulesArray.sort(
-      (a, b) =>
-        CUSTOM_SORT_ORDER.indexOf(a.module_id) -
-        CUSTOM_SORT_ORDER.indexOf(b.module_id)
+    // --- DEBUGGING LOGS ---
+    console.log("--- DEBUGGING SORT ---");
+    console.log(
+      "Array BEFORE sort:",
+      modulesArray.map((m) => m.module_id)
     );
+
+    // ใช้ Custom Order ที่กำหนดไว้ในการเรียงลำดับ
+    modulesArray.sort((a, b) => {
+      const indexA = CUSTOM_SORT_ORDER.indexOf(a.module_id);
+      const indexB = CUSTOM_SORT_ORDER.indexOf(b.module_id);
+      // Log เพื่อดูว่าหา index เจอหรือไม่
+      console.log(
+        `Comparing: ${a.module_id} (index ${indexA}) vs ${b.module_id} (index ${indexB})`
+      );
+      return indexA - indexB;
+    });
+
+    console.log(
+      "Array AFTER sort:",
+      modulesArray.map((m) => m.module_id)
+    );
+    console.log("--- END DEBUGGING ---");
+    // --- END DEBUGGING LOGS ---
 
     res.status(200).json({
       lastUpdated: new Date().toISOString(),
