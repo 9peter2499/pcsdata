@@ -5,9 +5,12 @@ const supabase = require("../supabaseClient");
 
 router.get("/", async (req, res) => {
   try {
-    const { data: tors, error } = await supabase
-      .from("TORs")
-      .select("tor_status, tor_fixing, Modules(module_id, module_name)");
+    // 1. อัปเดตคำสั่ง SELECT ให้ดึงข้อมูลจากตารางที่เกี่ยวข้อง (JOIN)
+    const { data: tors, error } = await supabase.from("TORs").select(`
+        Modules(module_id, module_name),
+        status:tor_status_id(option_name),
+        fixing:tor_fixing_id(option_name)
+      `);
 
     if (error) throw error;
 
@@ -19,38 +22,38 @@ router.get("/", async (req, res) => {
 
       const moduleId = module.module_id;
       const moduleName = module.module_name;
-      const status = (tor.tor_status || "unknown").toLowerCase();
 
       if (!summary[moduleId]) {
         summary[moduleId] = {
           module_id: moduleId,
           module_name: moduleName,
-          total: 0,
-          fixing_count: 0,
-          status_count: {
-            completed: 0,
-            in_progress: 0,
-            pending: 0,
-            unknown: 0,
+          // 2. สร้างโครงสร้าง "stats" ให้ตรงกับที่ Frontend ต้องการใช้
+          stats: {
+            pass: 0,
+            fixed_pending_review: 0,
+            needs_guidance: 0,
           },
         };
       }
 
-      summary[moduleId].total += 1;
+      // 3. แปลงค่าที่ได้จาก DB ให้เป็นหมวดหมู่ที่ Frontend เข้าใจ
+      const statusText = tor.status ? tor.status.option_name : null;
 
-      if (tor.tor_fixing) {
-        summary[moduleId].fixing_count += 1;
-      }
-
-      if (["completed", "in_progress", "pending"].includes(status)) {
-        summary[moduleId].status_count[status] += 1;
-      } else {
-        summary[moduleId].status_count.unknown += 1;
+      if (statusText === "ผ่าน") {
+        summary[moduleId].stats.pass += 1;
+      } else if (statusText === "แก้ไขแล้ว รอพิจารณา") {
+        summary[moduleId].stats.fixed_pending_review += 1;
+      } else if (statusText === "ต้องการคำแนะนำ") {
+        summary[moduleId].stats.needs_guidance += 1;
       }
     });
 
-    const result = Object.values(summary);
-    res.status(200).json(result);
+    // 4. แปลง object ให้เป็น array และจัดโครงสร้างสุดท้ายก่อนส่งออก
+    const modulesArray = Object.values(summary);
+    res.status(200).json({
+      lastUpdated: new Date().toISOString(),
+      modules: modulesArray, // ส่งออกเป็น object ที่มี key ชื่อ "modules"
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
