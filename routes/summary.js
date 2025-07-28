@@ -39,13 +39,25 @@ router.get("/", async (req, res) => {
       const moduleId = module.module_id;
       const moduleName = module.module_name;
 
+      // if (!summary[moduleId]) {
+      //   summary[moduleId] = {
+      //     module_id: moduleId,
+      //     module_name: moduleName,
+      //     stats: {
+      //       pass: 0,
+      //       done: 0,
+      //       fixed_pending_review: 0,
+      //       needs_guidance: 0,
+      //     },
+      //   };
+      // }
+
       if (!summary[moduleId]) {
         summary[moduleId] = {
           module_id: moduleId,
           module_name: moduleName,
           stats: {
             pass: 0,
-            done: 0,
             fixed_pending_review: 0,
             needs_guidance: 0,
           },
@@ -55,12 +67,23 @@ router.get("/", async (req, res) => {
       const statusId = tor.tor_status_id;
       const fixingId = tor.tor_fixing_id;
 
+      //   if (statusId === "PASS") {
+      //     summary[moduleId].stats.pass += 1;
+      //   } else if (statusId === "FAIL") {
+      //     if (fixingId === "DONE") {
+      //       summary[moduleId].stats.done += 1;
+      //     } else if (fixingId === "PENDING") {
+      //       summary[moduleId].stats.fixed_pending_review += 1;
+      //     } else if (fixingId === "GUIDANCE") {
+      //       summary[moduleId].stats.needs_guidance += 1;
+      //     }
+      //   }
+      // });
+
       if (statusId === "PASS") {
         summary[moduleId].stats.pass += 1;
       } else if (statusId === "FAIL") {
-        if (fixingId === "DONE") {
-          summary[moduleId].stats.done += 1;
-        } else if (fixingId === "PENDING") {
+        if (fixingId === "PENDING") {
           summary[moduleId].stats.fixed_pending_review += 1;
         } else if (fixingId === "GUIDANCE") {
           summary[moduleId].stats.needs_guidance += 1;
