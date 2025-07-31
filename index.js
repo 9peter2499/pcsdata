@@ -45,8 +45,11 @@ const apiLimiter = rateLimit({
   message: { error: "Too many requests from this IP, please try again later." },
 });
 
-app.use(express.json());
-app.use("/api/", apiLimiter);
+//app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+//app.use("/api/", apiLimiter);
 
 // 4. --- Helper & Middleware ---
 const { addLog } = require("./services/logService");
@@ -59,18 +62,38 @@ app.get("/", (req, res) => {
   res.send("PCS API is alive and running! 🎉");
 });
 
-app.use("/api/log-action", require("./routes/log"));
+// app.use("/api/log-action", require("./routes/log"));
+// console.log("✅ Mounting /api/tors route...");
+// app.use("/api/tors", require("./routes/tors"));
+// app.use("/api/tordetail", require("./routes/tordetail"));
+// app.use("/api/feedback", require("./routes/feedback"));
+// app.use("/api/worked", require("./routes/worked"));
+// app.use("/api/summary", require("./routes/summary"));
+// app.use("/api/options", require("./routes/options"));
+// app.use("/api/presentation", require("./routes/presentation"));
+// app.use("/api/presentation/dates", require("./routes/presentationDates"));
+// app.use(
+//   "/api/presentation/last-updated",
+//   require("./routes/presentationLastUpdated")
+// );
+
+app.use("/api/log-action", apiLimiter, require("./routes/log"));
 console.log("✅ Mounting /api/tors route...");
-app.use("/api/tors", require("./routes/tors"));
-app.use("/api/tordetail", require("./routes/tordetail"));
-app.use("/api/feedback", require("./routes/feedback"));
-app.use("/api/worked", require("./routes/worked"));
-app.use("/api/summary", require("./routes/summary"));
-app.use("/api/options", require("./routes/options"));
-app.use("/api/presentation", require("./routes/presentation"));
-app.use("/api/presentation/dates", require("./routes/presentationDates"));
+app.use("/api/tors", apiLimiter, require("./routes/tors"));
+app.use("/api/tordetail", apiLimiter, require("./routes/tordetail"));
+app.use("/api/feedback", apiLimiter, require("./routes/feedback"));
+app.use("/api/worked", apiLimiter, require("./routes/worked"));
+app.use("/api/summary", apiLimiter, require("./routes/summary"));
+app.use("/api/options", apiLimiter, require("./routes/options"));
+app.use("/api/presentation", apiLimiter, require("./routes/presentation"));
+app.use(
+  "/api/presentation/dates",
+  apiLimiter,
+  require("./routes/presentationDates")
+);
 app.use(
   "/api/presentation/last-updated",
+  apiLimiter,
   require("./routes/presentationLastUpdated")
 );
 
