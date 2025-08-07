@@ -20,8 +20,8 @@ server.headersTimeout = 120000;
 
 // ✅ --- ย้าย allowedOrigins มาประกาศไว้ก่อนใช้งาน ---
 const allowedOrigins = [
-  "https://dp-web-lyfe.onrender.com",
-  // ใส่ URL อื่นๆ ที่ต้องการอนุญาตได้ที่นี่ เช่น localhost สำหรับทดสอบ
+  "https://app.dp-web.online", //
+  "https://dp-web-lyfe.onrender.com", //
   "http://localhost:5500",
   "http://127.0.0.1:5500",
 ];
@@ -61,21 +61,6 @@ const checkAdmin = require("./middlewares/checkAdmin");
 app.get("/", (req, res) => {
   res.send("PCS API is alive and running! 🎉");
 });
-
-// app.use("/api/log-action", require("./routes/log"));
-// console.log("✅ Mounting /api/tors route...");
-// app.use("/api/tors", require("./routes/tors"));
-// app.use("/api/tordetail", require("./routes/tordetail"));
-// app.use("/api/feedback", require("./routes/feedback"));
-// app.use("/api/worked", require("./routes/worked"));
-// app.use("/api/summary", require("./routes/summary"));
-// app.use("/api/options", require("./routes/options"));
-// app.use("/api/presentation", require("./routes/presentation"));
-// app.use("/api/presentation/dates", require("./routes/presentationDates"));
-// app.use(
-//   "/api/presentation/last-updated",
-//   require("./routes/presentationLastUpdated")
-// );
 
 app.use("/api/log-action", apiLimiter, require("./routes/log"));
 console.log("✅ Mounting /api/tors route...");
