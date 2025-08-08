@@ -213,7 +213,6 @@ router.get("/:id", async (req, res) => {
           ),
           PCSWorked (
             *,
-            // ✅ แก้ไข Hint ให้ตรงกับชื่อ Constraint ใน Schema
             worked_status:MasterOptions!fk_worked_status(option_label)
           ),
           PresentationItems (
