@@ -183,11 +183,15 @@ router.get("/", async (req, res) => {
 // ใน routes/tors.js
 
 // --- GET: Single TOR by ID (เวอร์ชันแก้ไขสมบูรณ์) ---
+//
+
+// ใน routes/tors.js
+
+// --- GET: Single TOR by ID (เวอร์ชันแก้ไข Foreign Key Hint) ---
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    // ใช้การ select แบบซ้อนกันเพื่อดึงข้อมูลทั้งหมดที่เกี่ยวข้องใน request เดียว
     const { data, error } = await supabase
       .from("TORs")
       .select(
@@ -209,7 +213,8 @@ router.get("/:id", async (req, res) => {
           ),
           PCSWorked (
             *,
-            worked_status:MasterOptions!fk_pcsworked_status(option_label)
+            // ✅ แก้ไข Hint ให้ตรงกับชื่อ Constraint ใน Schema
+            worked_status:MasterOptions!fk_worked_status(option_label)
           ),
           PresentationItems (
             *,
@@ -224,20 +229,16 @@ router.get("/:id", async (req, res) => {
       .eq("tor_id", id)
       .single();
 
-    // ตรวจสอบ Error จาก Supabase โดยใช้ตัวแปร `error` ที่ถูกต้อง
     if (error) {
       throw error;
     }
 
-    // ถ้าไม่พบข้อมูล
     if (!data) {
       return res.status(404).json({ error: "TOR not found" });
     }
 
-    // ส่งข้อมูลที่สมบูรณ์กลับไปให้ Frontend
     res.status(200).json(data);
   } catch (err) {
-    // <<< ใช้ตัวแปรชื่อ err หรือ error ให้ตรงกัน
     console.error(`[API CATCH] Error fetching detail for TOR ID ${id}:`, err);
     res.status(500).json({ error: err.message });
   }
