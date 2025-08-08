@@ -44,22 +44,56 @@ router.get("/:id", async (req, res) => {
 
   try {
     // Step 1: ดึงข้อมูลหลักของ TORs
-    const { data: torData, error: torError } = await supabase
+    // const { data: torData, error: torError } = await supabase
+    //   .from("TORs")
+    //   .select(
+    //     `
+    //       tor_id,
+    //       tor_name,
+    //       tor_status_id,
+    //       tor_fixing_id,
+    //       created_at,
+    //       Modules(module_id,module_name),
+    //       tor_status:MasterOptions!fk_tor_status(option_id, option_label),
+    //       tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label)
+    //   `
+    //   )
+    //   .eq("tor_id", id)
+    //   .single();
+
+    // ใน Backend, ไฟล์ routes/tors.js, ส่วนที่ดึง TOR รายการเดียว
+
+    const { data, error } = await supabase
       .from("TORs")
       .select(
         `
-          tor_id,
-          tor_name,
-          tor_status_id,
-          tor_fixing_id,
-          created_at,
-          Modules(module_id,module_name),
-          tor_status:MasterOptions!fk_tor_status(option_id, option_label),
-          tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label)
-      `
+      tor_id,
+      tor_name,
+      tor_status_id,
+      tor_fixing_id,
+      created_at,
+      Modules(module_id, module_name),
+      tor_status:MasterOptions!fk_tor_status(option_id, option_label),
+      tor_fixing:MasterOptions!fk_tor_fixing(option_id, option_label),
+      
+      // --- ✅ ส่วนที่เพิ่มเข้ามาเพื่อดึงข้อมูลรายละเอียดและผู้นำเสนอ ---
+      TORDetail (
+        *,
+        PATFeedback(*),
+        PCSWorked(*),
+        PresentationItems (
+          *,
+          Presentation (
+            *,
+            MasterOptions:ptt_presenter_id (option_label)
+          )
+        )
+      )
+    `
       )
       .eq("tor_id", id)
       .single();
+
     if (torError) throw new Error(`Error fetching TORs: ${torError.message}`);
     if (!torData) return res.status(404).json({ error: "TOR not found" });
 
