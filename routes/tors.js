@@ -5,8 +5,6 @@ const supabase = require("../supabaseClient");
 const checkAdmin = require("../middlewares/checkAdmin");
 const { addLog } = require("../services/logService");
 
-// routes/tors.js
-
 // --- GET: All TORs (The Final Correct Version) ---
 router.get("/", async (req, res) => {
   try {
